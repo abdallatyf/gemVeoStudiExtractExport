@@ -8,16 +8,21 @@ import {
   AspectRatio,
   AudioFile, // Import AudioFile
   DEFAULT_FRAME_RATE,
+  DEFAULT_TEXT_COLOR,
   DEFAULT_VIDEO_DURATION_SECONDS,
+  DEFAULT_FONT_SIZE,
   EncodingProfile,
   GenerateVideoParams,
   GenerationMode,
   ImageFile,
   MAX_FRAME_RATE,
+  MAX_FONT_SIZE,
   MAX_VIDEO_DURATION_SECONDS,
   MIN_FRAME_RATE,
+  MIN_FONT_SIZE,
   MIN_VIDEO_DURATION_SECONDS,
   Resolution,
+  TextOverlay, // Import TextOverlay
   VeoModel,
   VideoFile,
   VideoQuality,
@@ -35,7 +40,9 @@ import {
   TextModeIcon,
   TvIcon,
   XMarkIcon,
+  TextIcon, // New icon for text overlay
 } from './icons';
+import VideoPlayerWithScrubber from './VideoPlayerWithScrubber'; // Import the new component
 
 const aspectRatioDisplayNames: Record<AspectRatio, string> = {
   [AspectRatio.LANDSCAPE]: 'Landscape (16:9)',
@@ -50,6 +57,19 @@ const modeIcons: Record<GenerationMode, React.ReactNode> = {
   ),
   [GenerationMode.EXTEND_VIDEO]: <FilmIcon className="w-5 h-5" />,
 };
+
+const textOverlayPositionNames: Record<TextOverlay['position'], string> = {
+  topLeft: 'Top Left',
+  topCenter: 'Top Center',
+  topRight: 'Top Right',
+  midLeft: 'Middle Left',
+  midCenter: 'Middle Center',
+  midRight: 'Middle Right',
+  bottomLeft: 'Bottom Left',
+  bottomCenter: 'Bottom Center',
+  bottomRight: 'Bottom Right',
+};
+
 
 const fileToBase64 = <T extends {file: File; base64: string}>(
   file: File,
@@ -356,6 +376,14 @@ const PromptForm: React.FC<PromptFormProps> = ({
     initialValues?.backgroundMusic ?? null,
   ); // New state for background music
 
+  // New states for Text Overlay
+  const [textOverlayEnabled, setTextOverlayEnabled] = useState(
+    !!initialValues?.textOverlay,
+  );
+  const [textOverlay, setTextOverlay] = useState<TextOverlay | null>(
+    initialValues?.textOverlay ?? null,
+  );
+
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isModeSelectorOpen, setIsModeSelectorOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -383,6 +411,9 @@ const PromptForm: React.FC<PromptFormProps> = ({
       setFrameRate(initialValues.frameRate ?? DEFAULT_FRAME_RATE);
       setEncodingProfile(initialValues.encodingProfile ?? EncodingProfile.STANDARD);
       setBackgroundMusic(initialValues.backgroundMusic ?? null); // Sync background music
+      
+      setTextOverlay(initialValues.textOverlay ?? null);
+      setTextOverlayEnabled(!!initialValues.textOverlay);
     }
   }, [initialValues]);
 
@@ -468,6 +499,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
         frameRate, // Pass the selected frame rate
         encodingProfile, // Pass the selected encoding profile
         backgroundMusic, // Pass the selected background music
+        textOverlay: textOverlayEnabled && textOverlay?.text ? textOverlay : null, // Pass text overlay if enabled and has text
       });
     },
     [
@@ -488,6 +520,8 @@ const PromptForm: React.FC<PromptFormProps> = ({
       frameRate,
       encodingProfile,
       backgroundMusic, // Added backgroundMusic to dependencies
+      textOverlayEnabled,
+      textOverlay,
     ],
   );
 
@@ -506,6 +540,8 @@ const PromptForm: React.FC<PromptFormProps> = ({
     setFrameRate(DEFAULT_FRAME_RATE); // Reset frame rate on mode change
     setEncodingProfile(EncodingProfile.STANDARD); // Reset encoding profile on mode change
     setBackgroundMusic(null); // Reset background music on mode change
+    setTextOverlay(null); // Reset text overlay on mode change
+    setTextOverlayEnabled(false); // Disable text overlay on mode change
   };
 
   const promptPlaceholder = {
@@ -596,22 +632,28 @@ const PromptForm: React.FC<PromptFormProps> = ({
     }
     if (generationMode === GenerationMode.EXTEND_VIDEO) {
       return (
-        <div className="mb-3 p-4 bg-[#2c2c2e] rounded-xl border border-gray-700 flex items-center justify-center gap-4">
-          <VideoUpload
-            label={
-              <>
-                Input Video
-                <br />
-                (must be 720p veo generated)
-              </>
-            }
-            video={inputVideo}
-            onSelect={setInputVideo}
-            onRemove={() => {
-              setInputVideo(null);
-              setInputVideoObject(null);
-            }}
-          />
+        <div className="mb-3">
+          {inputVideo ? (
+            <VideoPlayerWithScrubber videoFile={inputVideo} disabled={true} />
+          ) : (
+            <div className="p-4 bg-[#2c2c2e] rounded-xl border border-gray-700 flex items-center justify-center gap-4">
+              <VideoUpload
+                label={
+                  <>
+                    Input Video
+                    <br />
+                    (must be 720p veo generated)
+                  </>
+                }
+                video={inputVideo}
+                onSelect={setInputVideo}
+                onRemove={() => {
+                  setInputVideo(null);
+                  setInputVideoObject(null);
+                }}
+              />
+            </div>
+          )}
         </div>
       );
     }
@@ -636,6 +678,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
 
   // Disable additional settings for certain modes
   const disableAdvancedSettings = isFixedResolutionMode || isExtendMode;
+  const disableTextOverlayControls = !textOverlayEnabled || disableAdvancedSettings;
 
   let isSubmitDisabled = false;
   let tooltipText = '';
@@ -834,6 +877,117 @@ const PromptForm: React.FC<PromptFormProps> = ({
             />
             <p className="text-xs text-gray-500 mt-2">
               Note: The current Veo API does not directly support adding background music to generated videos. This audio will be ignored.
+            </p>
+          </div>
+          {/* New Text Overlay Control */}
+          <div className="mt-4 pt-4 border-t border-gray-700">
+            <div className="flex items-center mb-4">
+              <input
+                id="text-overlay-toggle"
+                type="checkbox"
+                checked={textOverlayEnabled}
+                onChange={(e) => {
+                  setTextOverlayEnabled(e.target.checked);
+                  if (!e.target.checked) {
+                    setTextOverlay(null); // Clear text overlay data when disabled
+                  } else {
+                    setTextOverlay({
+                      text: textOverlay?.text ?? '',
+                      fontSize: textOverlay?.fontSize ?? DEFAULT_FONT_SIZE,
+                      color: textOverlay?.color ?? DEFAULT_TEXT_COLOR,
+                      position: textOverlay?.position ?? 'bottomCenter',
+                    });
+                  }
+                }}
+                disabled={disableAdvancedSettings}
+                className="w-4 h-4 text-indigo-600 bg-gray-700 border-gray-600 rounded focus:ring-indigo-500 focus:ring-offset-gray-800 cursor-pointer disabled:opacity-50"
+              />
+              <label htmlFor="text-overlay-toggle" className={`ml-2 text-sm font-medium ${disableAdvancedSettings ? 'text-gray-500' : 'text-gray-300'} cursor-pointer`}>
+                Enable Text Overlay
+              </label>
+            </div>
+
+            <div className={`space-y-4 ${disableTextOverlayControls ? 'opacity-50' : ''}`}>
+              <div>
+                <label htmlFor="overlay-text" className={`text-xs block mb-1.5 font-medium ${disableTextOverlayControls ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Text Content
+                </label>
+                <textarea
+                  id="overlay-text"
+                  value={textOverlay?.text ?? ''}
+                  onChange={(e) => setTextOverlay(prev => ({ ...prev!, text: e.target.value }))}
+                  disabled={disableTextOverlayControls}
+                  placeholder="Enter text for overlay..."
+                  rows={2}
+                  className="w-full bg-[#1f1f1f] border border-gray-600 rounded-lg px-3 py-2.5 text-gray-200 placeholder-gray-500 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-700/50 disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="font-size" className={`text-xs block mb-1.5 font-medium ${disableTextOverlayControls ? 'text-gray-500' : 'text-gray-400'}`}>
+                    Font Size
+                  </label>
+                  <div className="relative flex items-center gap-3">
+                    <input
+                      id="font-size"
+                      type="range"
+                      min={MIN_FONT_SIZE}
+                      max={MAX_FONT_SIZE}
+                      value={textOverlay?.fontSize ?? DEFAULT_FONT_SIZE}
+                      onChange={(e) => setTextOverlay(prev => ({ ...prev!, fontSize: Number(e.target.value) }))}
+                      disabled={disableTextOverlayControls}
+                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg disabled:opacity-50"
+                    />
+                    <input
+                      type="number"
+                      min={MIN_FONT_SIZE}
+                      max={MAX_FONT_SIZE}
+                      value={textOverlay?.fontSize ?? DEFAULT_FONT_SIZE}
+                      onChange={(e) => {
+                        const value = Math.max(
+                          MIN_FONT_SIZE,
+                          Math.min(MAX_FONT_SIZE, Number(e.target.value)),
+                        );
+                        setTextOverlay(prev => ({ ...prev!, fontSize: value }));
+                      }}
+                      disabled={disableTextOverlayControls}
+                      className="w-20 bg-[#1f1f1f] border border-gray-600 rounded-lg px-3 py-2.5 text-center appearance-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-700/50 disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="text-color" className={`text-xs block mb-1.5 font-medium ${disableTextOverlayControls ? 'text-gray-500' : 'text-gray-400'}`}>
+                    Text Color
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="text-color"
+                      type="color"
+                      value={textOverlay?.color ?? DEFAULT_TEXT_COLOR}
+                      onChange={(e) => setTextOverlay(prev => ({ ...prev!, color: e.target.value }))}
+                      disabled={disableTextOverlayControls}
+                      className="w-full h-11 bg-[#1f1f1f] border border-gray-600 rounded-lg px-2 py-1 appearance-none cursor-pointer [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:border-none disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+              </div>
+              <CustomSelect
+                label="Position"
+                value={textOverlay?.position ?? 'bottomCenter'}
+                onChange={(e) => setTextOverlay(prev => ({ ...prev!, position: e.target.value as TextOverlay['position'] }))}
+                icon={<TextIcon className="w-5 h-5 text-gray-400" />}
+                disabled={disableTextOverlayControls}>
+                {Object.entries(textOverlayPositionNames).map(([key, name]) => (
+                  <option key={key} value={key}>
+                    {name}
+                  </option>
+                ))}
+              </CustomSelect>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Note: The current Veo API does not directly support adding text overlays to generated videos. This setting will be ignored.
             </p>
           </div>
         </div>

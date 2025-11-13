@@ -39,6 +39,9 @@ const VideoResult: React.FC<VideoResultProps> = ({
     'overflow-hidden',
     'bg-black',
     'shadow-lg',
+    'transition-all', // Add transition for smooth animation
+    'hover:scale-[1.02]', // Slightly scale up on hover
+    'hover:shadow-2xl', // Add a larger shadow on hover
   ];
 
   if (videoAspectRatio === AspectRatio.PORTRAIT) {

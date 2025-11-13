@@ -14,6 +14,7 @@ import {GenerateVideoParams} from '../types'; // Import GenerateVideoParams
 // Fix: API key is now handled by process.env.API_KEY, so it's removed from parameters.
 export const generateVideo = async (
   params: GenerateVideoParams,
+  onProgress?: (message: string) => void, // New optional onProgress callback
 ): Promise<{objectUrl: string; blob: Blob; uri: string; video: Video}> => {
   console.log('Starting video generation with params:', params);
 
@@ -58,6 +59,14 @@ export const generateVideo = async (
   if (params.backgroundMusic) {
     console.warn(
       `Background music file '${params.backgroundMusic.file.name}' was provided, but the Veo API does not currently support adding background music directly to generated videos. This audio will be ignored.`,
+    );
+    // Do NOT add to config.
+  }
+
+  // Warn if textOverlay is provided, as the Veo API does not directly support it.
+  if (params.textOverlay && params.textOverlay.text) {
+    console.warn(
+      `Text overlay with content '${params.textOverlay.text}' was requested, but the Veo API does not currently support adding text overlays to generated videos. This text will be ignored.`,
     );
     // Do NOT add to config.
   }
@@ -140,10 +149,12 @@ export const generateVideo = async (
     }
   }
 
+  onProgress?.('Sending request to Veo...');
   console.log('Submitting video generation request...', generateVideoPayload);
   let operation = await ai.models.generateVideos(generateVideoPayload);
   console.log('Video generation operation started:', operation);
 
+  onProgress?.('Veo is creating your video... (this may take a few minutes)');
   while (!operation.done) {
     await new Promise((resolve) => setTimeout(resolve, 10000));
     console.log('...Generating...');
@@ -166,6 +177,7 @@ export const generateVideo = async (
     const url = decodeURIComponent(videoObject.uri);
     console.log('Fetching video from:', url);
 
+    onProgress?.('Finalizing and preparing video for download...');
     // Fix: The API key for fetching the video must also come from process.env.API_KEY.
     const res = await fetch(`${url}&key=${process.env.API_KEY}`);
 

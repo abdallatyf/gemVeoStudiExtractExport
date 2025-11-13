@@ -19,6 +19,7 @@ import {
   Tv,
   X,
   Download, // Import the Download icon from lucide-react
+  Type as Text, // Import Type as Text icon
 } from 'lucide-react';
 
 const defaultProps = {
@@ -38,7 +39,7 @@ export const SparklesIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => 
 );
 
 export const PlusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <Plus {...defaultProps} {...props} />
+  <Plus {...defaultProps} {...props} />;
 );
 
 export const ChevronDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (
@@ -84,6 +85,11 @@ export const FilmIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 // New icon for downloading
 export const DownloadIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <Download {...defaultProps} {...props} />
+);
+
+// New icon for text overlay
+export const TextIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <Text {...defaultProps} {...props} />
 );
 
 // This icon had a different stroke width in the original file, so we preserve it.

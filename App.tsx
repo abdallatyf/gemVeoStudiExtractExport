@@ -4,8 +4,7 @@
 */
 import {Video} from '@google/genai';
 import React, {useCallback, useEffect, useState} from 'react';
-import ApiKeyDialog from './components/ApiKeyDialog';
-import {CurvedArrowDownIcon} from './components/icons';
+import {CurvedArrowDownIcon, FilmIcon} from './components/icons';
 import LoadingIndicator from './components/LoadingIndicator';
 import PromptForm from './components/PromptForm';
 import VideoResult from './components/VideoResult';
@@ -31,96 +30,106 @@ const App: React.FC = () => {
   );
   const [lastVideoObject, setLastVideoObject] = useState<Video | null>(null);
   const [lastVideoBlob, setLastVideoBlob] = useState<Blob | null>(null);
-  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+  // const [showApiKeyDialog, setShowApiKeyDialog] = useState(false); // Removed temporarily
+  const [loadingPhaseMessage, setLoadingPhaseMessage] = useState<string | null>(
+    null,
+  ); // New state for granular loading messages
 
   // A single state to hold the initial values for the prompt form
   const [initialFormValues, setInitialFormValues] =
     useState<GenerateVideoParams | null>(null);
 
-  // Check for API key on initial load
-  useEffect(() => {
-    const checkApiKey = async () => {
-      if (window.aistudio) {
-        try {
-          if (!(await window.aistudio.hasSelectedApiKey())) {
-            setShowApiKeyDialog(true);
-          }
-        } catch (error) {
-          console.warn(
-            'aistudio.hasSelectedApiKey check failed, assuming no key selected.',
-            error,
-          );
-          setShowApiKeyDialog(true);
-        }
-      }
-    };
-    checkApiKey();
-  }, []);
+  // Check for API key on initial load - Removed temporarily
+  // useEffect(() => {
+  //   const checkApiKey = async () => {
+  //     if (window.aistudio) {
+  //       try {
+  //         if (!(await window.aistudio.hasSelectedApiKey())) {
+  //           setShowApiKeyDialog(true);
+  //         }
+  //       } catch (error) {
+  //         console.warn(
+  //           'aistudio.hasSelectedApiKey check failed, assuming no key selected.',
+  //           error,
+  //         );
+  //         setShowApiKeyDialog(true);
+  //       }
+  //     }
+  //   };
+  //   checkApiKey();
+  // }, []);
 
   const showStatusError = (message: string) => {
     setErrorMessage(message);
     setAppState(AppState.ERROR);
+    setLoadingPhaseMessage(null); // Clear loading message on error
   };
 
   const handleGenerate = useCallback(async (params: GenerateVideoParams) => {
-    if (window.aistudio) {
-      try {
-        if (!(await window.aistudio.hasSelectedApiKey())) {
-          setShowApiKeyDialog(true);
-          return;
-        }
-      } catch (error) {
-        console.warn(
-          'aistudio.hasSelectedApiKey check failed, assuming no key selected.',
-          error,
-        );
-        setShowApiKeyDialog(true);
-        return;
-      }
-    }
+    // API Key check removed temporarily
+    // if (window.aistudio) {
+    //   try {
+    //     if (!(await window.aistudio.hasSelectedApiKey())) {
+    //       setShowApiKeyDialog(true);
+    //       return;
+    //     }
+    //   } catch (error) {
+    //     console.warn(
+    //       'aistudio.hasSelectedApiKey check failed, assuming no key selected.',
+    //       error,
+    //     );
+    //     setShowApiKeyDialog(true);
+    //     return;
+    //   }
+    // }
 
     setAppState(AppState.LOADING);
     setErrorMessage(null);
     setLastConfig(params);
+    setLoadingPhaseMessage('Initiating video generation...');
     // Reset initial form values for the next fresh start
     setInitialFormValues(null);
 
     try {
-      const {objectUrl, blob, video} = await generateVideo(params);
+      const {objectUrl, blob, video} = await generateVideo(params, (message) =>
+        setLoadingPhaseMessage(message),
+      );
       setVideoUrl(objectUrl);
       setLastVideoBlob(blob);
       setLastVideoObject(video);
       setAppState(AppState.SUCCESS);
+      setLoadingPhaseMessage(null); // Clear loading message on success
     } catch (error) {
       console.error('Video generation failed:', error);
       const errorMessage =
         error instanceof Error ? error.message : 'An unknown error occurred.';
 
       let userFriendlyMessage = `Video generation failed: ${errorMessage}`;
-      let shouldOpenDialog = false;
+      // let shouldOpenDialog = false; // Removed temporarily
 
       if (typeof errorMessage === 'string') {
         if (errorMessage.includes('Requested entity was not found.')) {
           userFriendlyMessage =
             'Model not found. This can be caused by an invalid API key or permission issues. Please check your API key.';
-          shouldOpenDialog = true;
+          // shouldOpenDialog = true; // Removed temporarily
         } else if (
           errorMessage.includes('API_KEY_INVALID') ||
           errorMessage.includes('API key not valid') ||
           errorMessage.toLowerCase().includes('permission denied')
         ) {
           userFriendlyMessage =
-            'Your API key is invalid or lacks permissions. Please select a valid, billing-enabled API key.';
-          shouldOpenDialog = true;
+            'Your API key is invalid or lacks permissions. Please ensure your API key is correctly configured and has billing enabled.';
+          // shouldOpenDialog = true; // Removed temporarily
         }
       }
 
       setErrorMessage(userFriendlyMessage);
       setAppState(AppState.ERROR);
+      setLoadingPhaseMessage(null); // Clear loading message on error
 
-      if (shouldOpenDialog) {
-        setShowApiKeyDialog(true);
-      }
+      // if (shouldOpenDialog) { // Removed temporarily
+      //   setShowApiKeyDialog(true);
+      // }
     }
   }, []);
 
@@ -130,15 +139,16 @@ const App: React.FC = () => {
     }
   }, [lastConfig, handleGenerate]);
 
-  const handleApiKeyDialogContinue = async () => {
-    setShowApiKeyDialog(false);
-    if (window.aistudio) {
-      await window.aistudio.openSelectKey();
-    }
-    if (appState === AppState.ERROR && lastConfig) {
-      handleRetry();
-    }
-  };
+  // handleApiKeyDialogContinue removed temporarily
+  // const handleApiKeyDialogContinue = async () => {
+  //   setShowApiKeyDialog(false);
+  //   if (window.aistudio) {
+  //     await window.aistudio.openSelectKey();
+  //   }
+  //   if (appState === AppState.ERROR && lastConfig) {
+  //     handleRetry();
+  //   }
+  // };
 
   const handleNewVideo = useCallback(() => {
     setAppState(AppState.IDLE);
@@ -148,6 +158,7 @@ const App: React.FC = () => {
     setLastVideoObject(null);
     setLastVideoBlob(null);
     setInitialFormValues(null); // Clear the form state
+    setLoadingPhaseMessage(null); // Clear loading message
   }, []);
 
   const handleTryAgainFromError = useCallback(() => {
@@ -156,6 +167,7 @@ const App: React.FC = () => {
       setInitialFormValues(lastConfig);
       setAppState(AppState.IDLE);
       setErrorMessage(null);
+      setLoadingPhaseMessage(null); // Clear loading message
     } else {
       // Fallback to a fresh start if there's no last config
       handleNewVideo();
@@ -181,6 +193,7 @@ const App: React.FC = () => {
           frameRate: DEFAULT_FRAME_RATE, // Reset frame rate for extend mode
           encodingProfile: EncodingProfile.STANDARD, // Reset encoding profile for extend mode
           backgroundMusic: null, // Reset background music for extend mode
+          textOverlay: null, // Reset text overlay for extend mode
           // Reset other media types
           startFrame: null,
           endFrame: null,
@@ -192,6 +205,7 @@ const App: React.FC = () => {
         setAppState(AppState.IDLE);
         setVideoUrl(null);
         setErrorMessage(null);
+        setLoadingPhaseMessage(null); // Clear loading message
       } catch (error) {
         console.error('Failed to process video for extension:', error);
         const message =
@@ -215,13 +229,17 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen bg-black text-gray-200 flex flex-col font-sans overflow-hidden">
-      {showApiKeyDialog && (
+      {/* ApiKeyDialog removed temporarily */}
+      {/* {showApiKeyDialog && (
         <ApiKeyDialog onContinue={handleApiKeyDialogContinue} />
-      )}
+      )} */}
       <header className="py-6 flex justify-center items-center px-8 relative z-10">
-        <h1 className="text-5xl font-semibold tracking-wide text-center bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-          Veo Studio
-        </h1>
+        <div className="flex items-center gap-3">
+          <FilmIcon className="w-10 h-10 text-indigo-400" />
+          <h1 className="text-5xl font-semibold tracking-wide bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+            Veo Studio
+          </h1>
+        </div>
       </header>
       <main className="w-full max-w-4xl mx-auto flex-grow flex flex-col p-4">
         {appState === AppState.IDLE ? (
@@ -243,7 +261,9 @@ const App: React.FC = () => {
           </>
         ) : (
           <div className="flex-grow flex items-center justify-center">
-            {appState === AppState.LOADING && <LoadingIndicator />}
+            {appState === AppState.LOADING && (
+              <LoadingIndicator phaseMessage={loadingPhaseMessage} />
+            )}
             {appState === AppState.SUCCESS && videoUrl && (
               <VideoResult
                 videoUrl={videoUrl}

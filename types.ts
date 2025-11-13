@@ -52,6 +52,11 @@ export const MIN_FRAME_RATE = 15;
 export const MAX_FRAME_RATE = 60;
 export const DEFAULT_FRAME_RATE = 30;
 
+export const MIN_FONT_SIZE = 12;
+export const MAX_FONT_SIZE = 72;
+export const DEFAULT_FONT_SIZE = 36;
+export const DEFAULT_TEXT_COLOR = '#FFFFFF'; // White
+
 export interface ImageFile {
   file: File;
   base64: string;
@@ -65,6 +70,13 @@ export interface VideoFile {
 export interface AudioFile {
   file: File;
   base64: string;
+}
+
+export interface TextOverlay {
+  text: string;
+  fontSize: number;
+  color: string;
+  position: 'topLeft' | 'topCenter' | 'topRight' | 'midLeft' | 'midCenter' | 'midRight' | 'bottomLeft' | 'bottomCenter' | 'bottomRight';
 }
 
 export interface GenerateVideoParams {
@@ -85,4 +97,5 @@ export interface GenerateVideoParams {
   frameRate?: number; // New field for desired frame rate
   encodingProfile?: EncodingProfile; // New field for desired encoding profile
   backgroundMusic?: AudioFile | null; // New field for background music
+  textOverlay?: TextOverlay | null; // New field for text overlay
 }
