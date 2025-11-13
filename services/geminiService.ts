@@ -18,7 +18,7 @@ export const generateVideo = async (
 ): Promise<{objectUrl: string; blob: Blob; uri: string; video: Video}> => {
   console.log('Starting video generation with params:', params);
 
-  // Fix: API key must be obtained from process.env.API_KEY as per guidelines.
+  // CRITICAL: Initialize GoogleGenAI right before the API call to ensure it uses the most up-to-date API key.
   const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
 
   const config: any = {
@@ -75,6 +75,14 @@ export const generateVideo = async (
   if (params.mode === GenerationMode.FRAMES_TO_VIDEO && params.enableFrameInterpolation) {
     console.warn(
       `Frame interpolation was requested, but the current Veo API does not directly support frame interpolation. This setting will be ignored.`,
+    );
+    // Do NOT add to config.
+  }
+
+  // Warn if outputFormat is provided, as the Veo API does not directly support it.
+  if (params.outputFormat) {
+    console.warn(
+      `Output video format '${params.outputFormat}' was requested, but the Veo API does not currently support explicit output video format control. The model will determine the final video format.`,
     );
     // Do NOT add to config.
   }

@@ -44,6 +44,11 @@ export enum EncodingProfile {
   HIGH_QUALITY = 'High Quality',
 }
 
+export enum VideoOutputFormat {
+  MP4 = 'MP4',
+  // AVI, MOV, etc. could be added here if supported in the future or desired for UI representation
+}
+
 export const MIN_VIDEO_DURATION_SECONDS = 1;
 export const MAX_VIDEO_DURATION_SECONDS = 15;
 export const DEFAULT_VIDEO_DURATION_SECONDS = 5;
@@ -99,4 +104,5 @@ export interface GenerateVideoParams {
   encodingProfile?: EncodingProfile; // New field for desired encoding profile
   backgroundMusic?: AudioFile | null; // New field for background music
   textOverlay?: TextOverlay | null; // New field for text overlay
+  outputFormat?: VideoOutputFormat; // New field for desired output video format
 }

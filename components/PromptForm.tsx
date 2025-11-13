@@ -26,6 +26,7 @@ import {
   VeoModel,
   VideoFile,
   VideoQuality,
+  VideoOutputFormat, // Import VideoOutputFormat
 } from '../types';
 import {
   ArrowRightIcon,
@@ -411,6 +412,9 @@ const PromptForm: React.FC<PromptFormProps> = ({
   const [backgroundMusic, setBackgroundMusic] = useState<AudioFile | null>(
     initialValues?.backgroundMusic ?? null,
   ); // New state for background music
+  const [outputFormat, setOutputFormat] = useState<VideoOutputFormat>(
+    initialValues?.outputFormat ?? VideoOutputFormat.MP4,
+  ); // New state for video output format
 
   // New states for Text Overlay
   const [textOverlayEnabled, setTextOverlayEnabled] = useState(
@@ -450,6 +454,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
       setFrameRate(initialValues.frameRate ?? DEFAULT_FRAME_RATE);
       setEncodingProfile(initialValues.encodingProfile ?? EncodingProfile.STANDARD);
       setBackgroundMusic(initialValues.backgroundMusic ?? null); // Sync background music
+      setOutputFormat(initialValues.outputFormat ?? VideoOutputFormat.MP4); // Sync output format
       
       setTextOverlay(initialValues.textOverlay ?? null);
       setTextOverlayEnabled(!!initialValues.textOverlay);
@@ -547,6 +552,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
         encodingProfile, // Pass the selected encoding profile
         backgroundMusic, // Pass the selected background music
         textOverlay: textOverlayEnabled && textOverlay?.text ? textOverlay : null, // Pass text overlay if enabled and has text
+        outputFormat, // Pass the selected output format
       });
     },
     [
@@ -570,6 +576,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
       backgroundMusic, // Added backgroundMusic to dependencies
       textOverlayEnabled,
       textOverlay,
+      outputFormat, // Added outputFormat to dependencies
     ],
   );
 
@@ -591,6 +598,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
     setBackgroundMusic(null); // Reset background music on mode change
     setTextOverlay(null); // Reset text overlay on mode change
     setTextOverlayEnabled(false); // Disable text overlay on mode change
+    setOutputFormat(VideoOutputFormat.MP4); // Reset output format on mode change
   };
 
   const handleSelectModel = (selectedModel: VeoModel) => {
@@ -1220,6 +1228,24 @@ const PromptForm: React.FC<PromptFormProps> = ({
             </div>
             <p className="text-xs text-gray-500 mt-2">
               Note: The current Veo API does not directly support adding text overlays to generated videos. This setting will be ignored.
+            </p>
+          </div>
+          {/* New Video Output Format Control */}
+          <div className="mt-4 pt-4 border-t border-gray-700">
+            <CustomSelect
+              label="Output Video Format"
+              value={outputFormat}
+              onChange={(e) => setOutputFormat(e.target.value as VideoOutputFormat)}
+              icon={<DownloadIcon className="w-5 h-5 text-gray-400" />}
+              disabled={disableAdvancedSettings}>
+              {Object.values(VideoOutputFormat).map((format) => (
+                <option key={format} value={format}>
+                  {format}
+                </option>
+              ))}
+            </CustomSelect>
+            <p className="text-xs text-yellow-400/80 mt-2">
+              Note: The current Veo API does not directly support explicit output video format control. The model will determine the final video format.
             </p>
           </div>
         </div>
