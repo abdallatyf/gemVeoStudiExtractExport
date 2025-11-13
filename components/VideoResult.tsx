@@ -107,27 +107,31 @@ const VideoResult: React.FC<VideoResultProps> = ({
       <div className="flex flex-wrap justify-center gap-4">
         <button
           onClick={onRetry}
-          className="flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors">
+          className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors"
+          aria-label="Retry generation">
           <ArrowPathIcon className="w-5 h-5" />
-          Retry
+          Retry Generation
         </button>
         {canExtend && (
           <button
             onClick={onExtend}
-            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors">
+            className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+            aria-label="Extend video">
             <SparklesIcon className="w-5 h-5" />
             Extend
           </button>
         )}
         <button
           onClick={handleDownload}
-          className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors">
+          className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
+          aria-label="Download video">
           <DownloadIcon className="w-5 h-5" />
           Download
         </button>
         <button
           onClick={onNewVideo}
-          className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors">
+          className="flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
+          aria-label="Create new video">
           <PlusIcon className="w-5 h-5" />
           New Video
         </button>

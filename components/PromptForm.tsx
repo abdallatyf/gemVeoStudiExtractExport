@@ -42,6 +42,7 @@ import {
   TextIcon, // New icon for text overlay
   // Fix: Import ReferencesModeIcon
   ReferencesModeIcon,
+  DownloadIcon,
 } from './icons';
 import VideoPlayerWithScrubber from './VideoPlayerWithScrubber'; // Import the new component
 
@@ -57,6 +58,23 @@ const modeIcons: Record<GenerationMode, React.ReactNode> = {
     <ReferencesModeIcon className="w-5 h-5" />
   ),
   [GenerationMode.EXTEND_VIDEO]: <FilmIcon className="w-5 h-5" />,
+};
+
+const modeDescriptions: Record<GenerationMode, string> = {
+  [GenerationMode.TEXT_TO_VIDEO]: 'Generate video from a text prompt.',
+  [GenerationMode.FRAMES_TO_VIDEO]: 'Animate between a start and end frame.',
+  [GenerationMode.REFERENCES_TO_VIDEO]: 'Create video using reference and style images.',
+  [GenerationMode.EXTEND_VIDEO]: 'Extend a previously generated video. (internal)', // Not directly selectable
+};
+
+const veoModelDisplayNames: Record<VeoModel, string> = {
+  [VeoModel.VEO_FAST]: 'Veo Fast',
+  [VeoModel.VEO]: 'Veo Standard',
+};
+
+const veoModelDescriptions: Record<VeoModel, string> = {
+  [VeoModel.VEO_FAST]: 'Optimized for quicker generation, good for drafts.',
+  [VeoModel.VEO]: 'Higher quality output, may take longer to generate.',
 };
 
 const textOverlayPositionNames: Record<TextOverlay['position'], string> = {
@@ -324,6 +342,20 @@ interface PromptFormProps {
   initialValues?: GenerateVideoParams | null;
 }
 
+// Mock data for "Fetch Latest References"
+const mockReferenceImages: ImageFile[] = [
+  {
+    file: new File([], 'latest_ref_1.png', {type: 'image/png'}),
+    base64:
+      'iVBORw0KGgoAAAANSUhEUgAAAKAAAACgCAMAAAC8DgGmAAAAAXNSR0IB2cksfwAAAAlwSFlzAAAWJQAAFiUCS8MReQAAAFpQTFRFAAAABgYGrq6u9PT0jo6OqqqqgoKCkpKSampq8PDwsbGxxcXFmZmZq6urcnJyjo6Oj4+Ph4eHl5eXkJCQlpaWtra2u7u7dnZ2gICAmJiYrKysAAAAAAAAAAA/eS7rAAAAJ10Uk5TAAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKTE1OT1BTUVZXWFlaW1xdXl9gYmRlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJjI2Oj5CRlJWWl5iZmpucnZ6foKGio6SlpqeoqauxtbW7rJ9KAAAAbklEQVR4nO3dyRKAIQwGYUQRe/e3bYxSwj1w4M1O4Xl+e9y9g0w3zef9P2xU4OQ8oEABQoQIEyYcOHDgwIEjR44cOXbgwIEjR44cOXbgwIEjR44cOXbgwIEjR44cOXbgwIEj9xKGAQf3zP92EBAvUeLgAAAAAElFTkSuQmCC', // Example 128x128 white pixel
+  },
+  {
+    file: new File([], 'latest_ref_2.png', {type: 'image/png'}),
+    base64:
+      'iVBORw0KGgoAAAANSUhEUgAAAKAAAACgCAMAAAC8DgGmAAAAAXNSR0IB2cksfwAAAAlwSFlzAAAWJQAAFiUCS8MReQAAAFpQTFRFAAAABgYGrq6u9PT0jo6OqqqqgoKCkpKSampq8PDwsbGxxcXFmZmZq6urcnJyjo6Oj4+Ph4eHl5eXkJCQlpaWtra2u7u7dnZ2gICAmJiYrKysAAAAAAAAAAA/eS7rAAAAJ10Uk5TAAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKTE1OT1BTUVZXWFlaW1xdXl9gYmRlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJjI2Oj5CRlJWWl5iZmpucnZ6foKGio6SlpqeoqauxtbW7rJ9KAAAAbklEQVR4nO3dyRKAIQwGYUQRe/e3bYxSwj1w4M1O4Xl+e9y9g0w3zef9P2xU4OQ8oEABQoQIEyYcOHDgwIEjR44cOXbgwIEjR44cOXbgwIEjR44cOXbgwIEjR44cOXbgwIEjR44cOXbgwIEj9xKGAQf3zP92EBAvUeLgAAAAAElFTkSuQmCC',
+  },
+];
+
 const PromptForm: React.FC<PromptFormProps> = ({
   onGenerate,
   initialValues,
@@ -361,6 +393,9 @@ const PromptForm: React.FC<PromptFormProps> = ({
     initialValues?.inputVideoObject ?? null,
   );
   const [isLooping, setIsLooping] = useState(initialValues?.isLooping ?? false);
+  const [enableFrameInterpolation, setEnableFrameInterpolation] = useState(
+    initialValues?.enableFrameInterpolation ?? false,
+  ); // New state for frame interpolation
   const [videoQuality, setVideoQuality] = useState<VideoQuality>(
     initialValues?.videoQuality ?? VideoQuality.MEDIUM,
   );
@@ -387,8 +422,10 @@ const PromptForm: React.FC<PromptFormProps> = ({
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isModeSelectorOpen, setIsModeSelectorOpen] = useState(false);
+  const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false); // New state for model selector
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modeSelectorRef = useRef<HTMLDivElement>(null);
+  const modelSelectorRef = useRef<HTMLDivElement>(null); // New ref for model selector
 
   // Sync state with initialValues prop when it changes (e.g., for "Extend" or "Try Again")
   useEffect(() => {
@@ -405,6 +442,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
       setInputVideo(initialValues.inputVideo ?? null);
       setInputVideoObject(initialValues.inputVideoObject ?? null);
       setIsLooping(initialValues.isLooping ?? false);
+      setEnableFrameInterpolation(initialValues.enableFrameInterpolation ?? false); // Sync frame interpolation
       setVideoQuality(initialValues.videoQuality ?? VideoQuality.MEDIUM);
       setDurationSeconds(
         initialValues.durationSeconds ?? DEFAULT_VIDEO_DURATION_SECONDS,
@@ -447,6 +485,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
     }
   }, [prompt]);
 
+  // Effect to close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -454,6 +493,12 @@ const PromptForm: React.FC<PromptFormProps> = ({
         !modeSelectorRef.current.contains(event.target as Node)
       ) {
         setIsModeSelectorOpen(false);
+      }
+      if (
+        modelSelectorRef.current &&
+        !modelSelectorRef.current.contains(event.target as Node)
+      ) {
+        setIsModelSelectorOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -489,12 +534,13 @@ const PromptForm: React.FC<PromptFormProps> = ({
         resolution: finalResolution, // Use the derived final resolution
         mode: generationMode,
         startFrame,
-        endFrame,
+        endFrame: isLooping && startFrame ? startFrame : endFrame, // Use startFrame as endFrame if looping
         referenceImages,
         styleImage,
         inputVideo,
         inputVideoObject,
         isLooping,
+        enableFrameInterpolation, // Pass frame interpolation setting
         videoQuality, // Pass the selected video quality for initialValues tracking
         durationSeconds, // Pass the selected duration
         frameRate, // Pass the selected frame rate
@@ -516,6 +562,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
       inputVideoObject,
       onGenerate,
       isLooping,
+      enableFrameInterpolation, // Added to dependencies
       videoQuality,
       durationSeconds,
       frameRate,
@@ -537,12 +584,24 @@ const PromptForm: React.FC<PromptFormProps> = ({
     setInputVideo(null);
     setInputVideoObject(null);
     setIsLooping(false);
+    setEnableFrameInterpolation(false); // Reset frame interpolation on mode change
     setDurationSeconds(DEFAULT_VIDEO_DURATION_SECONDS); // Reset duration on mode change
     setFrameRate(DEFAULT_FRAME_RATE); // Reset frame rate on mode change
     setEncodingProfile(EncodingProfile.STANDARD); // Reset encoding profile on mode change
     setBackgroundMusic(null); // Reset background music on mode change
     setTextOverlay(null); // Reset text overlay on mode change
     setTextOverlayEnabled(false); // Disable text overlay on mode change
+  };
+
+  const handleSelectModel = (selectedModel: VeoModel) => {
+    setModel(selectedModel);
+    setIsModelSelectorOpen(false);
+  };
+
+  // New function to fetch mock reference images
+  const handleFetchReferences = () => {
+    // Only take up to 3 images as per API limits
+    setReferenceImages(mockReferenceImages.slice(0, 3));
   };
 
   const promptPlaceholder = {
@@ -560,6 +619,51 @@ const PromptForm: React.FC<PromptFormProps> = ({
     GenerationMode.REFERENCES_TO_VIDEO,
   ];
 
+  const selectableModels = Object.values(VeoModel);
+
+  // State for drag and drop
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    dragItem.current = index;
+    e.currentTarget.classList.add('opacity-50'); // Visual feedback for dragged item
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    dragOverItem.current = index;
+    // Add visual feedback for potential drop target
+    e.currentTarget.classList.add('border-indigo-500');
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    // Remove visual feedback
+    e.currentTarget.classList.remove('border-indigo-500');
+  };
+
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+    e.currentTarget.classList.remove('opacity-50'); // Remove visual feedback from dragged item
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (dragItem.current === null || dragOverItem.current === null) return;
+
+    // Reset visual feedback from all elements
+    const allDraggableItems = e.currentTarget.parentElement?.querySelectorAll('.draggable-image-wrapper');
+    allDraggableItems?.forEach(item => item.classList.remove('border-indigo-500', 'opacity-50'));
+
+
+    const newReferenceImages = [...referenceImages];
+    const [draggedItemContent] = newReferenceImages.splice(dragItem.current, 1);
+    newReferenceImages.splice(dragOverItem.current, 0, draggedItemContent);
+    setReferenceImages(newReferenceImages);
+
+    dragItem.current = null;
+    dragOverItem.current = null;
+  };
+
+
   const renderMediaUploads = () => {
     if (generationMode === GenerationMode.FRAMES_TO_VIDEO) {
       return (
@@ -571,9 +675,12 @@ const PromptForm: React.FC<PromptFormProps> = ({
               onSelect={setStartFrame}
               onRemove={() => {
                 setStartFrame(null);
-                setIsLooping(false);
+                setEndFrame(null); // Clear end frame if start is removed
+                setIsLooping(false); // Disable looping if start frame is removed
+                setEnableFrameInterpolation(false); // Disable interpolation if start frame is removed
               }}
             />
+            {/* Only show End Frame if not looping */}
             {!isLooping && (
               <ImageUpload
                 label="End Frame"
@@ -583,20 +690,47 @@ const PromptForm: React.FC<PromptFormProps> = ({
               />
             )}
           </div>
-          {startFrame && !endFrame && (
-            <div className="mt-3 flex items-center">
-              <input
-                id="loop-video-checkbox"
-                type="checkbox"
-                checked={isLooping}
-                onChange={(e) => setIsLooping(e.target.checked)}
-                className="w-4 h-4 text-indigo-600 bg-gray-700 border-gray-600 rounded focus:ring-indigo-500 focus:ring-offset-gray-800 cursor-pointer"
-              />
-              <label
-                htmlFor="loop-video-checkbox"
-                className="ml-2 text-sm font-medium text-gray-300 cursor-pointer">
-                Create a looping video
-              </label>
+          {startFrame && ( // Only show options if a start frame is provided
+            <div className="flex flex-col gap-2 mt-3 w-full max-w-xs text-left">
+              <div className="flex items-center">
+                <input
+                  id="loop-video-checkbox"
+                  type="checkbox"
+                  checked={isLooping}
+                  onChange={(e) => {
+                    setIsLooping(e.target.checked);
+                    // If looping is enabled, clear the end frame as start frame will be used
+                    if (e.target.checked) {
+                      setEndFrame(null);
+                    }
+                  }}
+                  className="w-4 h-4 text-indigo-600 bg-gray-700 border-gray-600 rounded focus:ring-indigo-500 focus:ring-offset-gray-800 cursor-pointer"
+                />
+                <label
+                  htmlFor="loop-video-checkbox"
+                  className="ml-2 text-sm font-medium text-gray-300 cursor-pointer">
+                  Create a looping video (uses start frame as end frame)
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  id="frame-interpolation-checkbox"
+                  type="checkbox"
+                  checked={enableFrameInterpolation}
+                  onChange={(e) => setEnableFrameInterpolation(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 bg-gray-700 border-gray-600 rounded focus:ring-indigo-500 focus:ring-offset-gray-800 cursor-pointer"
+                />
+                <label
+                  htmlFor="frame-interpolation-checkbox"
+                  className="ml-2 text-sm font-medium text-gray-300 cursor-pointer">
+                  Enable Frame Interpolation (smooth motion)
+                </label>
+              </div>
+              {enableFrameInterpolation && (
+                <p className="text-xs text-yellow-400/80 mt-1">
+                  Note: The current Veo API does not directly support frame interpolation. This setting will be ignored.
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -604,30 +738,56 @@ const PromptForm: React.FC<PromptFormProps> = ({
     }
     if (generationMode === GenerationMode.REFERENCES_TO_VIDEO) {
       return (
-        <div className="mb-3 p-4 bg-[#2c2c2e] rounded-xl border border-gray-700 flex flex-wrap items-center justify-center gap-2">
-          {referenceImages.map((img, index) => (
-            <ImageUpload
-              key={index}
-              image={img}
-              label=""
-              onSelect={() => {}}
-              onRemove={() =>
-                setReferenceImages((imgs) => imgs.filter((_, i) => i !== index))
-              }
-            />
-          ))}
-          {referenceImages.length < 3 && (
-            <ImageUpload
-              label="Add Reference"
-              onSelect={(img) => setReferenceImages((imgs) => [...imgs, img])}
-            />
-          )}
-          {/* <ImageUpload
-            label="Style Image"
-            image={styleImage}
-            onSelect={setStyleImage}
-            onRemove={() => setStyleImage(null)}
-          /> */}
+        <div className="mb-3 p-4 bg-[#2c2c2e] rounded-xl border border-gray-700 flex flex-col items-center justify-center gap-4">
+          <div className="relative group self-start px-2 -mt-1">
+            <p className="text-xs text-gray-500 mb-2 cursor-help font-medium">
+              Reference Images (order matters)
+            </p>
+            <div
+              role="tooltip"
+              className="absolute z-20 top-full left-0 mt-0 w-max max-w-xs px-3 py-1.5 bg-gray-900 border border-gray-700 text-white text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              The order of reference images matters; they guide the video generation sequence.
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2 w-full">
+            {referenceImages.map((img, index) => (
+              <div
+                key={index} // Using index as key due to stable list order during D&D
+                draggable
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragEnter={(e) => handleDragEnter(e, index)}
+                onDragLeave={handleDragLeave}
+                onDragOver={(e) => e.preventDefault()} // Allow drop
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
+                className="draggable-image-wrapper border-2 border-transparent rounded-lg transition-all duration-150"
+              >
+                <ImageUpload
+                  image={img}
+                  label=""
+                  onSelect={() => {}} // No-op for existing images
+                  onRemove={() =>
+                    setReferenceImages((imgs) => imgs.filter((_, i) => i !== index))
+                  }
+                />
+              </div>
+            ))}
+            {referenceImages.length < 3 && (
+              <ImageUpload
+                label="Add Reference"
+                onSelect={(img) => setReferenceImages((imgs) => [...imgs, img])}
+              />
+            )}
+            <button
+              type="button"
+              onClick={handleFetchReferences}
+              disabled={referenceImages.length >= 3}
+              className={`w-28 h-20 bg-blue-700/50 hover:bg-blue-700 border-2 border-dashed border-blue-600 rounded-lg flex flex-col items-center justify-center text-blue-400 hover:text-white transition-colors
+                ${referenceImages.length >= 3 ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              <DownloadIcon className="w-6 h-6" />
+              <span className="text-xs mt-1">Fetch Latest</span>
+            </button>
+          </div>
         </div>
       );
     }
@@ -739,18 +899,52 @@ const PromptForm: React.FC<PromptFormProps> = ({
       {isSettingsOpen && (
         <div className="absolute bottom-full left-0 right-0 mb-3 p-4 bg-[#2c2c2e] rounded-xl border border-gray-700 shadow-2xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <CustomSelect
-              label="Model"
-              value={model}
-              onChange={(e) => setModel(e.target.value as VeoModel)}
-              icon={<SparklesIcon className="w-5 h-5 text-gray-400" />}
-              disabled={isRefMode}>
-              {Object.values(VeoModel).map((modelValue) => (
-                <option key={modelValue} value={modelValue}>
-                  {modelValue}
-                </option>
-              ))}
-            </CustomSelect>
+            <div className="relative" ref={modelSelectorRef}>
+              <label className={`text-xs block mb-1.5 font-medium ${isRefMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                Model
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsModelSelectorOpen((prev) => !prev)}
+                disabled={isRefMode}
+                className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[#1f1f1f] border border-gray-600 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ${isRefMode ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-700'}`}>
+                <SparklesIcon className="w-5 h-5 text-gray-400" />
+                <span className={`font-medium text-sm whitespace-nowrap ${isRefMode ? 'text-gray-500' : 'text-gray-300'}`}>
+                  {veoModelDisplayNames[model]}
+                </span>
+                <ChevronDownIcon
+                  className={`w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${
+                    isRefMode ? 'text-gray-600' : 'text-gray-400'
+                  }`}
+                />
+              </button>
+              {isModelSelectorOpen && (
+                <div className="absolute top-full mt-2 w-72 bg-[#2c2c2e] border border-gray-600 rounded-lg shadow-xl overflow-hidden z-10">
+                  <div className="px-4 py-3 bg-gray-700 text-gray-200 font-semibold text-sm border-b border-gray-600">
+                    Select Veo Model
+                  </div>
+                  {selectableModels.map((modelOption) => (
+                    <button
+                      key={modelOption}
+                      type="button"
+                      onClick={() => handleSelectModel(modelOption)}
+                      className={`w-full text-left flex items-start gap-3 p-3 hover:bg-indigo-600/50 ${model === modelOption ? 'bg-indigo-600/30 text-white' : 'text-gray-300'}`}>
+                      <div className="shrink-0 pt-0.5">
+                        <SparklesIcon className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="font-medium text-sm block">
+                          {veoModelDisplayNames[modelOption]}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {veoModelDescriptions[modelOption]}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <CustomSelect
               label="Aspect Ratio"
               value={aspectRatio}
@@ -1024,15 +1218,23 @@ const PromptForm: React.FC<PromptFormProps> = ({
               </span>
             </button>
             {isModeSelectorOpen && (
-              <div className="absolute bottom-full mb-2 w-60 bg-[#2c2c2e] border border-gray-600 rounded-lg shadow-xl overflow-hidden z-10">
+              <div className="absolute bottom-full mb-2 w-72 bg-[#2c2c2e] border border-gray-600 rounded-lg shadow-xl overflow-hidden z-10">
+                <div className="px-4 py-3 bg-gray-700 text-gray-200 font-semibold text-sm border-b border-gray-600">
+                  Select Generation Mode
+                </div>
                 {selectableModes.map((mode) => (
                   <button
                     key={mode}
                     type="button"
                     onClick={() => handleSelectMode(mode)}
-                    className={`w-full text-left flex items-center gap-3 p-3 hover:bg-indigo-600/50 ${generationMode === mode ? 'bg-indigo-600/30 text-white' : 'text-gray-300'}`}>
-                    {modeIcons[mode]}
-                    <span>{mode}</span>
+                    className={`w-full text-left flex items-start gap-3 p-3 hover:bg-indigo-600/50 ${generationMode === mode ? 'bg-indigo-600/30 text-white' : 'text-gray-300'}`}>
+                    <div className="shrink-0 pt-0.5">{modeIcons[mode]}</div>
+                    <div>
+                      <span className="font-medium text-sm block">{mode}</span>
+                      <span className="text-xs text-gray-400">
+                        {modeDescriptions[mode]}
+                      </span>
+                    </div>
                   </button>
                 ))}
               </div>

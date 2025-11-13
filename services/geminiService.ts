@@ -71,6 +71,14 @@ export const generateVideo = async (
     // Do NOT add to config.
   }
 
+  // Warn if frame interpolation is enabled for Frames to Video mode.
+  if (params.mode === GenerationMode.FRAMES_TO_VIDEO && params.enableFrameInterpolation) {
+    console.warn(
+      `Frame interpolation was requested, but the current Veo API does not directly support frame interpolation. This setting will be ignored.`,
+    );
+    // Do NOT add to config.
+  }
+
   const generateVideoPayload: any = {
     model: params.model,
     config: config,
@@ -92,9 +100,11 @@ export const generateVideo = async (
       );
     }
 
+    // Handle looping: if isLooping is true, use startFrame as lastFrame
     const finalEndFrame = params.isLooping
       ? params.startFrame
       : params.endFrame;
+
     if (finalEndFrame) {
       generateVideoPayload.config.lastFrame = {
         imageBytes: finalEndFrame.base64,

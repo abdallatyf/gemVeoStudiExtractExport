@@ -92,6 +92,7 @@ export interface GenerateVideoParams {
   inputVideo?: VideoFile | null;
   inputVideoObject?: Video | null;
   isLooping?: boolean;
+  enableFrameInterpolation?: boolean; // New field for frame interpolation
   videoQuality?: VideoQuality; // New field for user selection
   durationSeconds?: number; // New field for desired video duration
   frameRate?: number; // New field for desired frame rate
