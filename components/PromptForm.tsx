@@ -624,43 +624,60 @@ const PromptForm: React.FC<PromptFormProps> = ({
   // State for drag and drop
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
+  const dragImageContainerRef = useRef<HTMLDivElement>(null); // Ref for the container of draggable images
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
     dragItem.current = index;
-    e.currentTarget.classList.add('opacity-50'); // Visual feedback for dragged item
+    // Add a class to the dragged item for visual feedback (e.g., reduce opacity)
+    e.currentTarget.classList.add('opacity-50');
+    e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    e.preventDefault(); // Necessary to allow drop
     dragOverItem.current = index;
-    // Add visual feedback for potential drop target
+    // Add visual feedback to the item being dragged over (e.g., border)
     e.currentTarget.classList.add('border-indigo-500');
   };
 
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    // Remove visual feedback
+    // Remove visual feedback when dragging leaves an item
     e.currentTarget.classList.remove('border-indigo-500');
   };
 
-  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
-    e.currentTarget.classList.remove('opacity-50'); // Remove visual feedback from dragged item
-  }
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault(); // Necessary to allow drop
+  };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (dragItem.current === null || dragOverItem.current === null) return;
-
-    // Reset visual feedback from all elements
-    const allDraggableItems = e.currentTarget.parentElement?.querySelectorAll('.draggable-image-wrapper');
-    allDraggableItems?.forEach(item => item.classList.remove('border-indigo-500', 'opacity-50'));
-
+    if (dragItem.current === null || dragOverItem.current === null || dragItem.current === dragOverItem.current) {
+      // Clean up any lingering drag feedback
+      resetDragFeedback();
+      return;
+    }
 
     const newReferenceImages = [...referenceImages];
     const [draggedItemContent] = newReferenceImages.splice(dragItem.current, 1);
     newReferenceImages.splice(dragOverItem.current, 0, draggedItemContent);
     setReferenceImages(newReferenceImages);
 
+    // Reset drag and drop state
     dragItem.current = null;
     dragOverItem.current = null;
+    resetDragFeedback();
+  };
+
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+    // Ensure dragged item's opacity is reset if drop didn't happen or was invalid
+    resetDragFeedback();
+  };
+
+  const resetDragFeedback = () => {
+    if (dragImageContainerRef.current) {
+      const allDraggableItems = dragImageContainerRef.current.querySelectorAll('.draggable-image-wrapper');
+      allDraggableItems.forEach(item => item.classList.remove('opacity-50', 'border-indigo-500'));
+    }
   };
 
 
@@ -741,7 +758,8 @@ const PromptForm: React.FC<PromptFormProps> = ({
         <div className="mb-3 p-4 bg-[#2c2c2e] rounded-xl border border-gray-700 flex flex-col items-center justify-center gap-4">
           <div className="relative group self-start px-2 -mt-1">
             <p className="text-xs text-gray-500 mb-2 cursor-help font-medium">
-              Reference Images (order matters)
+              Reference Images (order matters){' '}
+              <span className="inline-block px-1 py-0.5 rounded-full bg-gray-600 text-gray-200 text-xs leading-none">?</span>
             </p>
             <div
               role="tooltip"
@@ -749,18 +767,18 @@ const PromptForm: React.FC<PromptFormProps> = ({
               The order of reference images matters; they guide the video generation sequence.
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-2 w-full">
+          <div ref={dragImageContainerRef} className="flex flex-wrap items-center justify-center gap-2 w-full">
             {referenceImages.map((img, index) => (
               <div
-                key={index} // Using index as key due to stable list order during D&D
+                key={img.file.name + index} // Unique key for stable list order during D&D
                 draggable
                 onDragStart={(e) => handleDragStart(e, index)}
                 onDragEnter={(e) => handleDragEnter(e, index)}
                 onDragLeave={handleDragLeave}
-                onDragOver={(e) => e.preventDefault()} // Allow drop
+                onDragOver={handleDragOver} // Allow drop
                 onDrop={handleDrop}
                 onDragEnd={handleDragEnd}
-                className="draggable-image-wrapper border-2 border-transparent rounded-lg transition-all duration-150"
+                className="draggable-image-wrapper border-2 border-transparent rounded-lg transition-all duration-150 relative group"
               >
                 <ImageUpload
                   image={img}
@@ -770,6 +788,9 @@ const PromptForm: React.FC<PromptFormProps> = ({
                     setReferenceImages((imgs) => imgs.filter((_, i) => i !== index))
                   }
                 />
+                <span className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 bg-indigo-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center border-2 border-gray-900 shadow-md">
+                  {index + 1}
+                </span>
               </div>
             ))}
             {referenceImages.length < 3 && (

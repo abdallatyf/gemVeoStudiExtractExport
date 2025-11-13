@@ -33,6 +33,7 @@ const VideoResult: React.FC<VideoResultProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [videoDimensions, setVideoDimensions] = useState<{width: number; height: number} | null>(null); // New state for video dimensions
 
   useEffect(() => {
     const video = videoRef.current;
@@ -41,6 +42,7 @@ const VideoResult: React.FC<VideoResultProps> = ({
     const handleLoadedMetadata = () => {
       setDuration(video.duration);
       setCurrentTime(video.currentTime);
+      setVideoDimensions({width: video.videoWidth, height: video.videoHeight}); // Capture dimensions
     };
 
     const handleTimeUpdate = () => {
@@ -103,6 +105,11 @@ const VideoResult: React.FC<VideoResultProps> = ({
           <span>{formatTime(duration)}</span>
         </div>
       </div>
+      {videoDimensions && (
+        <p className="text-sm text-gray-400 -mt-6">
+          Resolution: {videoDimensions.width}x{videoDimensions.height}
+        </p>
+      )}
 
       <div className="flex flex-wrap justify-center gap-4">
         <button
