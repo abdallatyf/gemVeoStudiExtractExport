@@ -39,12 +39,30 @@ export enum VideoQuality {
   HIGH = 'High',
 }
 
+export enum EncodingProfile {
+  STANDARD = 'Standard',
+  HIGH_QUALITY = 'High Quality',
+}
+
+export const MIN_VIDEO_DURATION_SECONDS = 1;
+export const MAX_VIDEO_DURATION_SECONDS = 15;
+export const DEFAULT_VIDEO_DURATION_SECONDS = 5;
+
+export const MIN_FRAME_RATE = 15;
+export const MAX_FRAME_RATE = 60;
+export const DEFAULT_FRAME_RATE = 30;
+
 export interface ImageFile {
   file: File;
   base64: string;
 }
 
 export interface VideoFile {
+  file: File;
+  base64: string;
+}
+
+export interface AudioFile {
   file: File;
   base64: string;
 }
@@ -63,4 +81,8 @@ export interface GenerateVideoParams {
   inputVideoObject?: Video | null;
   isLooping?: boolean;
   videoQuality?: VideoQuality; // New field for user selection
+  durationSeconds?: number; // New field for desired video duration
+  frameRate?: number; // New field for desired frame rate
+  encodingProfile?: EncodingProfile; // New field for desired encoding profile
+  backgroundMusic?: AudioFile | null; // New field for background music
 }

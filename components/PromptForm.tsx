@@ -6,9 +6,17 @@ import {Video} from '@google/genai';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   AspectRatio,
+  AudioFile, // Import AudioFile
+  DEFAULT_FRAME_RATE,
+  DEFAULT_VIDEO_DURATION_SECONDS,
+  EncodingProfile,
   GenerateVideoParams,
   GenerationMode,
   ImageFile,
+  MAX_FRAME_RATE,
+  MAX_VIDEO_DURATION_SECONDS,
+  MIN_FRAME_RATE,
+  MIN_VIDEO_DURATION_SECONDS,
   Resolution,
   VeoModel,
   VideoFile,
@@ -64,6 +72,8 @@ const fileToImageFile = (file: File): Promise<ImageFile> =>
   fileToBase64<ImageFile>(file);
 const fileToVideoFile = (file: File): Promise<VideoFile> =>
   fileToBase64<VideoFile>(file);
+const fileToAudioFile = (file: File): Promise<AudioFile> =>
+  fileToBase64<AudioFile>(file); // New helper for audio files
 
 const CustomSelect: React.FC<{
   label: string;
@@ -220,6 +230,74 @@ const VideoUpload: React.FC<{
   );
 };
 
+// New AudioUpload Component
+const AudioUpload: React.FC<{
+  onSelect: (audio: AudioFile) => void;
+  onRemove?: () => void;
+  audio?: AudioFile | null;
+  label: React.ReactNode;
+  disabled?: boolean;
+}> = ({onSelect, onRemove, audio, label, disabled = false}) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const audioFile = await fileToAudioFile(file);
+        onSelect(audioFile);
+      } catch (error) {
+        console.error('Error converting file:', error);
+      }
+    }
+    if (inputRef.current) {
+      inputRef.current.value = ''; // Reset input value
+    }
+  };
+
+  if (audio) {
+    return (
+      <div className="flex flex-col items-center">
+        <div className="relative w-48 h-16 group">
+          <div className="w-full h-full bg-[#1f1f1f] border border-gray-600 rounded-lg flex items-center justify-center text-gray-300 overflow-hidden text-sm px-2">
+            <span className="truncate">{audio.file.name}</span>
+          </div>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="absolute top-1 right-1 w-6 h-6 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-label="Remove audio">
+            <XMarkIcon className="w-4 h-4" />
+          </button>
+        </div>
+        <span className="text-xs mt-2 text-gray-400">Background Track</span>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => !disabled && inputRef.current?.click()}
+      disabled={disabled}
+      className={`w-48 h-16 bg-gray-700/50 border-2 border-dashed border-gray-600 rounded-lg flex flex-col items-center justify-center text-gray-400 text-center transition-colors ${
+        disabled
+          ? 'opacity-50 cursor-not-allowed'
+          : 'hover:bg-gray-700 hover:text-white'
+      }`}>
+      <PlusIcon className="w-6 h-6" />
+      <span className="text-xs mt-1 px-2">{label}</span>
+      <input
+        type="file"
+        ref={inputRef}
+        onChange={handleFileChange}
+        accept="audio/*"
+        className="hidden"
+        disabled={disabled}
+      />
+    </button>
+  );
+};
+
 interface PromptFormProps {
   onGenerate: (params: GenerateVideoParams) => void;
   initialValues?: GenerateVideoParams | null;
@@ -265,6 +343,18 @@ const PromptForm: React.FC<PromptFormProps> = ({
   const [videoQuality, setVideoQuality] = useState<VideoQuality>(
     initialValues?.videoQuality ?? VideoQuality.MEDIUM,
   );
+  const [durationSeconds, setDurationSeconds] = useState<number>(
+    initialValues?.durationSeconds ?? DEFAULT_VIDEO_DURATION_SECONDS,
+  );
+  const [frameRate, setFrameRate] = useState<number>(
+    initialValues?.frameRate ?? DEFAULT_FRAME_RATE,
+  );
+  const [encodingProfile, setEncodingProfile] = useState<EncodingProfile>(
+    initialValues?.encodingProfile ?? EncodingProfile.STANDARD,
+  );
+  const [backgroundMusic, setBackgroundMusic] = useState<AudioFile | null>(
+    initialValues?.backgroundMusic ?? null,
+  ); // New state for background music
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isModeSelectorOpen, setIsModeSelectorOpen] = useState(false);
@@ -287,6 +377,12 @@ const PromptForm: React.FC<PromptFormProps> = ({
       setInputVideoObject(initialValues.inputVideoObject ?? null);
       setIsLooping(initialValues.isLooping ?? false);
       setVideoQuality(initialValues.videoQuality ?? VideoQuality.MEDIUM);
+      setDurationSeconds(
+        initialValues.durationSeconds ?? DEFAULT_VIDEO_DURATION_SECONDS,
+      );
+      setFrameRate(initialValues.frameRate ?? DEFAULT_FRAME_RATE);
+      setEncodingProfile(initialValues.encodingProfile ?? EncodingProfile.STANDARD);
+      setBackgroundMusic(initialValues.backgroundMusic ?? null); // Sync background music
     }
   }, [initialValues]);
 
@@ -368,6 +464,10 @@ const PromptForm: React.FC<PromptFormProps> = ({
         inputVideoObject,
         isLooping,
         videoQuality, // Pass the selected video quality for initialValues tracking
+        durationSeconds, // Pass the selected duration
+        frameRate, // Pass the selected frame rate
+        encodingProfile, // Pass the selected encoding profile
+        backgroundMusic, // Pass the selected background music
       });
     },
     [
@@ -383,7 +483,11 @@ const PromptForm: React.FC<PromptFormProps> = ({
       inputVideoObject,
       onGenerate,
       isLooping,
-      videoQuality, // Added videoQuality to dependencies
+      videoQuality,
+      durationSeconds,
+      frameRate,
+      encodingProfile,
+      backgroundMusic, // Added backgroundMusic to dependencies
     ],
   );
 
@@ -398,6 +502,10 @@ const PromptForm: React.FC<PromptFormProps> = ({
     setInputVideo(null);
     setInputVideoObject(null);
     setIsLooping(false);
+    setDurationSeconds(DEFAULT_VIDEO_DURATION_SECONDS); // Reset duration on mode change
+    setFrameRate(DEFAULT_FRAME_RATE); // Reset frame rate on mode change
+    setEncodingProfile(EncodingProfile.STANDARD); // Reset encoding profile on mode change
+    setBackgroundMusic(null); // Reset background music on mode change
   };
 
   const promptPlaceholder = {
@@ -526,6 +634,9 @@ const PromptForm: React.FC<PromptFormProps> = ({
       ? Resolution.P1080
       : Resolution.P720; // Default to 720p for LOW/MEDIUM
 
+  // Disable additional settings for certain modes
+  const disableAdvancedSettings = isFixedResolutionMode || isExtendMode;
+
   let isSubmitDisabled = false;
   let tooltipText = '';
 
@@ -610,6 +721,120 @@ const PromptForm: React.FC<PromptFormProps> = ({
                 </p>
               )}
             </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label htmlFor="video-duration" className={`text-xs block mb-1.5 font-medium ${disableAdvancedSettings ? 'text-gray-500' : 'text-gray-400'}`}>
+                Video Duration (seconds)
+              </label>
+              <div className="relative flex items-center gap-3">
+                <input
+                  id="video-duration"
+                  type="range"
+                  min={MIN_VIDEO_DURATION_SECONDS}
+                  max={MAX_VIDEO_DURATION_SECONDS}
+                  value={durationSeconds}
+                  onChange={(e) => setDurationSeconds(Number(e.target.value))}
+                  disabled={disableAdvancedSettings}
+                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg disabled:opacity-50"
+                />
+                <input
+                  type="number"
+                  min={MIN_VIDEO_DURATION_SECONDS}
+                  max={MAX_VIDEO_DURATION_SECONDS}
+                  value={durationSeconds}
+                  onChange={(e) => {
+                    const value = Math.max(
+                      MIN_VIDEO_DURATION_SECONDS,
+                      Math.min(MAX_VIDEO_DURATION_SECONDS, Number(e.target.value)),
+                    );
+                    setDurationSeconds(value);
+                  }}
+                  disabled={disableAdvancedSettings}
+                  className="w-20 bg-[#1f1f1f] border border-gray-600 rounded-lg px-3 py-2.5 text-center appearance-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-700/50 disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed"
+                />
+              </div>
+              {isExtendMode && (
+                <p className="text-xs text-yellow-400/80 mt-2">
+                  Duration is fixed to ~7s for video extensions.
+                </p>
+              )}
+              {!isExtendMode && (
+                 <p className="text-xs text-gray-500 mt-2">
+                   Note: Model output duration may vary and is not directly controllable via the API.
+                 </p>
+              )}
+            </div>
+            {/* New Frame Rate Control */}
+            <div>
+              <label htmlFor="frame-rate" className={`text-xs block mb-1.5 font-medium ${disableAdvancedSettings ? 'text-gray-500' : 'text-gray-400'}`}>
+                Frame Rate (FPS)
+              </label>
+              <div className="relative flex items-center gap-3">
+                <input
+                  id="frame-rate"
+                  type="range"
+                  min={MIN_FRAME_RATE}
+                  max={MAX_FRAME_RATE}
+                  value={frameRate}
+                  onChange={(e) => setFrameRate(Number(e.target.value))}
+                  disabled={disableAdvancedSettings}
+                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg disabled:opacity-50"
+                />
+                <input
+                  type="number"
+                  min={MIN_FRAME_RATE}
+                  max={MAX_FRAME_RATE}
+                  value={frameRate}
+                  onChange={(e) => {
+                    const value = Math.max(
+                      MIN_FRAME_RATE,
+                      Math.min(MAX_FRAME_RATE, Number(e.target.value)),
+                    );
+                    setFrameRate(value);
+                  }}
+                  disabled={disableAdvancedSettings}
+                  className="w-20 bg-[#1f1f1f] border border-gray-600 rounded-lg px-3 py-2.5 text-center appearance-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-700/50 disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Note: Model output frame rate may vary and is not directly controllable via the API.
+              </p>
+            </div>
+          </div>
+          {/* New Encoding Profile Control */}
+          <div className="mt-4">
+            <CustomSelect
+              label="Encoding Profile"
+              value={encodingProfile}
+              onChange={(e) => setEncodingProfile(e.target.value as EncodingProfile)}
+              icon={<FilmIcon className="w-5 h-5 text-gray-400" />}
+              disabled={disableAdvancedSettings}>
+              {Object.values(EncodingProfile).map((profile) => (
+                <option key={profile} value={profile}>
+                  {profile}
+                </option>
+              ))}
+            </CustomSelect>
+            <p className="text-xs text-gray-500 mt-2">
+              Note: Model output encoding settings may vary and are not directly controllable via the API.
+            </p>
+          </div>
+          {/* New Background Music Control */}
+          <div className="mt-4">
+            <label className={`text-xs block mb-1.5 font-medium ${disableAdvancedSettings ? 'text-gray-500' : 'text-gray-400'}`}>
+              Background Music (Optional)
+            </label>
+            <AudioUpload
+              label="Upload Audio"
+              audio={backgroundMusic}
+              onSelect={setBackgroundMusic}
+              onRemove={() => setBackgroundMusic(null)}
+              disabled={disableAdvancedSettings}
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              Note: The current Veo API does not directly support adding background music to generated videos. This audio will be ignored.
+            </p>
           </div>
         </div>
       )}

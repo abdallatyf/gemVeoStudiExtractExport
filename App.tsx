@@ -18,6 +18,8 @@ import {
   Resolution,
   VideoFile,
   VideoQuality,
+  DEFAULT_FRAME_RATE,
+  EncodingProfile,
 } from './types';
 
 const App: React.FC = () => {
@@ -176,6 +178,9 @@ const App: React.FC = () => {
           inputVideoObject: lastVideoObject, // for the API call
           resolution: Resolution.P720, // Extend requires 720p
           videoQuality: VideoQuality.MEDIUM, // Set to Medium as it's 720p
+          frameRate: DEFAULT_FRAME_RATE, // Reset frame rate for extend mode
+          encodingProfile: EncodingProfile.STANDARD, // Reset encoding profile for extend mode
+          backgroundMusic: null, // Reset background music for extend mode
           // Reset other media types
           startFrame: null,
           endFrame: null,

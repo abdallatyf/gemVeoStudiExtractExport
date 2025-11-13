@@ -8,7 +8,8 @@ import {
   VideoGenerationReferenceImage,
   VideoGenerationReferenceType,
 } from '@google/genai';
-import {GenerateVideoParams, GenerationMode} from '../types';
+import {GenerationMode} from '../types';
+import {GenerateVideoParams} from '../types'; // Import GenerateVideoParams
 
 // Fix: API key is now handled by process.env.API_KEY, so it's removed from parameters.
 export const generateVideo = async (
@@ -27,6 +28,38 @@ export const generateVideo = async (
   // Conditionally add aspect ratio. It's not used for extending videos.
   if (params.mode !== GenerationMode.EXTEND_VIDEO) {
     config.aspectRatio = params.aspectRatio;
+  }
+
+  // Warn if durationSeconds is provided, as the Veo API does not directly support it.
+  if (params.durationSeconds && params.mode !== GenerationMode.EXTEND_VIDEO) {
+    console.warn(
+      `Video duration of ${params.durationSeconds}s was requested, but the Veo API does not currently support explicit duration control. The model will determine the final video length.`,
+    );
+    // Do NOT add to config, as it's not a supported parameter in the API.
+  }
+
+  // Warn if frameRate is provided, as the Veo API does not directly support it.
+  if (params.frameRate && params.mode !== GenerationMode.EXTEND_VIDEO) {
+    console.warn(
+      `Video frame rate of ${params.frameRate} FPS was requested, but the Veo API does not currently support explicit frame rate control. The model will determine the final video frame rate.`,
+    );
+    // Do NOT add to config.
+  }
+
+  // Warn if encodingProfile is provided, as the Veo API does not directly support it.
+  if (params.encodingProfile && params.mode !== GenerationMode.EXTEND_VIDEO) {
+    console.warn(
+      `Video encoding profile '${params.encodingProfile}' was requested, but the Veo API does not currently support explicit encoding profile control. The model will determine the final video encoding.`,
+    );
+    // Do NOT add to config.
+  }
+
+  // Warn if backgroundMusic is provided, as the Veo API does not directly support it.
+  if (params.backgroundMusic) {
+    console.warn(
+      `Background music file '${params.backgroundMusic.file.name}' was provided, but the Veo API does not currently support adding background music directly to generated videos. This audio will be ignored.`,
+    );
+    // Do NOT add to config.
   }
 
   const generateVideoPayload: any = {
