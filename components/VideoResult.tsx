@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
+import {AspectRatio} from '../types';
 import {ArrowPathIcon, DownloadIcon, PlusIcon, SparklesIcon} from './icons';
 
 interface VideoResultProps {
@@ -11,6 +12,7 @@ interface VideoResultProps {
   onNewVideo: () => void;
   onExtend: () => void;
   canExtend: boolean;
+  videoAspectRatio: AspectRatio; // New prop for video aspect ratio
 }
 
 const VideoResult: React.FC<VideoResultProps> = ({
@@ -19,6 +21,7 @@ const VideoResult: React.FC<VideoResultProps> = ({
   onNewVideo,
   onExtend,
   canExtend,
+  videoAspectRatio,
 }) => {
   const handleDownload = () => {
     // Create an anchor element dynamically to trigger the download
@@ -30,12 +33,26 @@ const VideoResult: React.FC<VideoResultProps> = ({
     document.body.removeChild(link);
   };
 
+  const videoContainerClasses = [
+    'w-full',
+    'rounded-lg',
+    'overflow-hidden',
+    'bg-black',
+    'shadow-lg',
+  ];
+
+  if (videoAspectRatio === AspectRatio.PORTRAIT) {
+    videoContainerClasses.push('max-w-sm', 'max-h-[80vh]', 'aspect-[9/16]');
+  } else {
+    videoContainerClasses.push('max-w-2xl', 'aspect-[16/9]');
+  }
+
   return (
     <div className="w-full flex flex-col items-center gap-8 p-8 bg-gray-800/50 rounded-lg border border-gray-700 shadow-2xl">
       <h2 className="text-2xl font-bold text-gray-200">
         Your Creation is Ready!
       </h2>
-      <div className="w-full max-w-2xl aspect-video rounded-lg overflow-hidden bg-black shadow-lg">
+      <div className={videoContainerClasses.join(' ')}>
         <video
           src={videoUrl}
           controls

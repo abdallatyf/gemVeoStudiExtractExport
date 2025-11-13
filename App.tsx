@@ -12,6 +12,7 @@ import VideoResult from './components/VideoResult';
 import {generateVideo} from './services/geminiService';
 import {
   AppState,
+  AspectRatio,
   GenerateVideoParams,
   GenerationMode,
   Resolution,
@@ -245,6 +246,7 @@ const App: React.FC = () => {
                 onNewVideo={handleNewVideo}
                 onExtend={handleExtend}
                 canExtend={lastConfig?.resolution === Resolution.P720}
+                videoAspectRatio={lastConfig?.aspectRatio ?? AspectRatio.LANDSCAPE}
               />
             )}
             {appState === AppState.SUCCESS &&
