@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import React from 'react';
+import React, {useRef, useState, useEffect} from 'react';
 import {AspectRatio} from '../types';
 import {ArrowPathIcon, DownloadIcon, PlusIcon, SparklesIcon} from './icons';
 
@@ -15,6 +15,13 @@ interface VideoResultProps {
   videoAspectRatio: AspectRatio; // New prop for video aspect ratio
 }
 
+const formatTime = (seconds: number): string => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  const pad = (num: number) => num.toString().padStart(2, '0');
+  return `${pad(minutes)}:${pad(remainingSeconds)}`;
+};
+
 const VideoResult: React.FC<VideoResultProps> = ({
   videoUrl,
   onRetry,
@@ -23,6 +30,32 @@ const VideoResult: React.FC<VideoResultProps> = ({
   canExtend,
   videoAspectRatio,
 }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleLoadedMetadata = () => {
+      setDuration(video.duration);
+      setCurrentTime(video.currentTime);
+    };
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(video.currentTime);
+    };
+
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('timeupdate', handleTimeUpdate);
+
+    return () => {
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+    };
+  }, [videoUrl]); // Re-run effect if videoUrl changes
+
   const handleDownload = () => {
     // Create an anchor element dynamically to trigger the download
     const link = document.createElement('a');
@@ -57,12 +90,18 @@ const VideoResult: React.FC<VideoResultProps> = ({
       </h2>
       <div className={videoContainerClasses.join(' ')}>
         <video
+          ref={videoRef}
           src={videoUrl}
           controls
           autoPlay
           loop
           className="w-full h-full object-contain"
+          aria-label="Generated video"
         />
+        <div className="flex justify-between items-center px-4 py-2 bg-gray-900 text-gray-400 text-sm">
+          <span>{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
+        </div>
       </div>
 
       <div className="flex flex-wrap justify-center gap-4">

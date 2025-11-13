@@ -30,7 +30,6 @@ const App: React.FC = () => {
   );
   const [lastVideoObject, setLastVideoObject] = useState<Video | null>(null);
   const [lastVideoBlob, setLastVideoBlob] = useState<Blob | null>(null);
-  // const [showApiKeyDialog, setShowApiKeyDialog] = useState(false); // Removed temporarily
   const [loadingPhaseMessage, setLoadingPhaseMessage] = useState<string | null>(
     null,
   ); // New state for granular loading messages
@@ -39,26 +38,6 @@ const App: React.FC = () => {
   const [initialFormValues, setInitialFormValues] =
     useState<GenerateVideoParams | null>(null);
 
-  // Check for API key on initial load - Removed temporarily
-  // useEffect(() => {
-  //   const checkApiKey = async () => {
-  //     if (window.aistudio) {
-  //       try {
-  //         if (!(await window.aistudio.hasSelectedApiKey())) {
-  //           setShowApiKeyDialog(true);
-  //         }
-  //       } catch (error) {
-  //         console.warn(
-  //           'aistudio.hasSelectedApiKey check failed, assuming no key selected.',
-  //           error,
-  //         );
-  //         setShowApiKeyDialog(true);
-  //       }
-  //     }
-  //   };
-  //   checkApiKey();
-  // }, []);
-
   const showStatusError = (message: string) => {
     setErrorMessage(message);
     setAppState(AppState.ERROR);
@@ -66,23 +45,6 @@ const App: React.FC = () => {
   };
 
   const handleGenerate = useCallback(async (params: GenerateVideoParams) => {
-    // API Key check removed temporarily
-    // if (window.aistudio) {
-    //   try {
-    //     if (!(await window.aistudio.hasSelectedApiKey())) {
-    //       setShowApiKeyDialog(true);
-    //       return;
-    //     }
-    //   } catch (error) {
-    //     console.warn(
-    //       'aistudio.hasSelectedApiKey check failed, assuming no key selected.',
-    //       error,
-    //     );
-    //     setShowApiKeyDialog(true);
-    //     return;
-    //   }
-    // }
-
     setAppState(AppState.LOADING);
     setErrorMessage(null);
     setLastConfig(params);
@@ -105,13 +67,11 @@ const App: React.FC = () => {
         error instanceof Error ? error.message : 'An unknown error occurred.';
 
       let userFriendlyMessage = `Video generation failed: ${errorMessage}`;
-      // let shouldOpenDialog = false; // Removed temporarily
-
+      
       if (typeof errorMessage === 'string') {
         if (errorMessage.includes('Requested entity was not found.')) {
           userFriendlyMessage =
             'Model not found. This can be caused by an invalid API key or permission issues. Please check your API key.';
-          // shouldOpenDialog = true; // Removed temporarily
         } else if (
           errorMessage.includes('API_KEY_INVALID') ||
           errorMessage.includes('API key not valid') ||
@@ -119,17 +79,12 @@ const App: React.FC = () => {
         ) {
           userFriendlyMessage =
             'Your API key is invalid or lacks permissions. Please ensure your API key is correctly configured and has billing enabled.';
-          // shouldOpenDialog = true; // Removed temporarily
         }
       }
 
       setErrorMessage(userFriendlyMessage);
       setAppState(AppState.ERROR);
       setLoadingPhaseMessage(null); // Clear loading message on error
-
-      // if (shouldOpenDialog) { // Removed temporarily
-      //   setShowApiKeyDialog(true);
-      // }
     }
   }, []);
 
@@ -138,17 +93,6 @@ const App: React.FC = () => {
       handleGenerate(lastConfig);
     }
   }, [lastConfig, handleGenerate]);
-
-  // handleApiKeyDialogContinue removed temporarily
-  // const handleApiKeyDialogContinue = async () => {
-  //   setShowApiKeyDialog(false);
-  //   if (window.aistudio) {
-  //     await window.aistudio.openSelectKey();
-  //   }
-  //   if (appState === AppState.ERROR && lastConfig) {
-  //     handleRetry();
-  //   }
-  // };
 
   const handleNewVideo = useCallback(() => {
     setAppState(AppState.IDLE);
@@ -229,10 +173,6 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen bg-black text-gray-200 flex flex-col font-sans overflow-hidden">
-      {/* ApiKeyDialog removed temporarily */}
-      {/* {showApiKeyDialog && (
-        <ApiKeyDialog onContinue={handleApiKeyDialogContinue} />
-      )} */}
       <header className="py-6 flex justify-center items-center px-8 relative z-10">
         <div className="flex items-center gap-3">
           <FilmIcon className="w-10 h-10 text-indigo-400" />

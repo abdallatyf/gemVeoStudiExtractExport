@@ -34,13 +34,14 @@ import {
   FramesModeIcon,
   PlusIcon,
   RectangleStackIcon,
-  ReferencesModeIcon,
   SlidersHorizontalIcon,
   SparklesIcon,
   TextModeIcon,
   TvIcon,
   XMarkIcon,
   TextIcon, // New icon for text overlay
+  // Fix: Import ReferencesModeIcon
+  ReferencesModeIcon,
 } from './icons';
 import VideoPlayerWithScrubber from './VideoPlayerWithScrubber'; // Import the new component
 
@@ -634,7 +635,23 @@ const PromptForm: React.FC<PromptFormProps> = ({
       return (
         <div className="mb-3">
           {inputVideo ? (
-            <VideoPlayerWithScrubber videoFile={inputVideo} disabled={true} />
+            <div className="relative p-4 bg-[#2c2c2e] rounded-xl border border-gray-700 flex flex-col items-center">
+              <VideoPlayerWithScrubber videoFile={inputVideo} />
+              <button
+                type="button"
+                onClick={() => {
+                  setInputVideo(null);
+                  setInputVideoObject(null);
+                }}
+                className="absolute top-6 right-6 w-8 h-8 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center text-white transition-opacity z-10"
+                aria-label="Remove video">
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+              <span className="text-sm mt-3 text-gray-300 font-medium">Input Video for Extension</span>
+              <p className="text-xs text-gray-500 mt-1 text-center">
+                (Extension will be added to the end of this video)
+              </p>
+            </div>
           ) : (
             <div className="p-4 bg-[#2c2c2e] rounded-xl border border-gray-700 flex items-center justify-center gap-4">
               <VideoUpload
